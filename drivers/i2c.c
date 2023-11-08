@@ -38,7 +38,7 @@ int i2c_unregister(int fd) {
 }
 
 int i2c_write(int fd, int addr, uint8_t *buf, int len) {
-  int ret = ioctl(fd, I2C_SLAVE, addr << 1);
+  int ret = ioctl(fd, I2C_SLAVE, addr);
 
   if (ret < 0) {
     return -errno;
@@ -52,7 +52,7 @@ int i2c_write(int fd, int addr, uint8_t *buf, int len) {
 }
 
 int i2c_read(int fd, int addr, uint8_t *buf, int len) {
-  int ret = ioctl(fd, I2C_SLAVE, (addr << 1) | 0x1);
+  int ret = ioctl(fd, I2C_SLAVE, addr);
 
   if (ret < 0) {
     return -errno;

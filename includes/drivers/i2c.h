@@ -4,8 +4,8 @@
 #include <stdint.h>
 
 /* RPi has only 2 I2C buses (https://pinout.xyz/pinout/i2c) */
-#define I2C0 "/dev/i2c-0"
 #define I2C1 "/dev/i2c-1"
+#define I2C2 "/dev/i2c-2"
 
 /**
  * @struct i2c_buf
