@@ -21,6 +21,16 @@ typedef struct {
 
 
 /**
+ * Setup ADXL345 accelerometer unit
+ *
+ * @param[in]     fd    The file descriptor of the I2C bus with ADXL345
+ *
+ * @return    success: 0
+ *            fail: `-errno`
+ */
+int adxl345_setup(int fd);
+
+/**
  * Read an accelerometer data from the ADXL345
  *
  * @param[in]     fd    The file descriptor of the I2C bus with ADXL345
