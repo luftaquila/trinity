@@ -1,53 +1,33 @@
 #include <stdio.h>
-#include <stdint.h>
-#include <string.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <sys/socket.h>
 
 #include "types.h"
-#include "drivers/i2c.h"
-#include "drivers/adxl345.h"
+#include "drivers/ledmatrix.h"
 
 int main(void) {
-  int i2c1;
-  int ret = i2c_register(I2C1, &i2c1);
+  int ret = ledmatrix_setup();
 
   if (ret < 0) {
-    printf("[ERR] I2C register failed: %s\n", strerror(-ret));
-  } else {
-    printf("[INF] I2C register: %d\n", ret);
+    return -1;
   }
 
-  adxl345_setup(i2c1);
+  int arr[4] = { 0, };
 
-  if (ret < 0) {
-    printf("[ERR] ADXL345 setup failed: %s\n", strerror(-ret));
-  } else {
-    printf("[INF] ADXL345 setup: %d\n", ret);
+  int cnt = 0;
+  while (1) {
+    arr[0] = (cnt * 1) % 160;
+    arr[1] = (cnt * 2) % 160;
+    arr[2] = ((cnt * 1) + 10) % 160;
+    arr[3] = ((cnt * 3) + 10) % 160;
+    ledmatrix_drawgraph(arr, sizeof(arr) / sizeof(arr[0]));
+    usleep(10000);
+
+    cnt++;
   }
 
-  adxl345_data data;
-
-  for (int i = 0; i < 10; i++) {
-    ret = adxl345_read(i2c1, &data);
-
-    if (ret < 0) {
-      printf("[ERR] ADXL345 read failed: %s\n", strerror(-ret));
-    } else {
-      printf("[INF] ADXL345 read: x: %lf y: %lf z: %lf\n", data.x, data.y, data.z);
-    }
-
-    usleep(100000);
-  }
-
-  ret = i2c_unregister(i2c1);
-
-  if (ret < 0) {
-    printf("[ERR] I2C unregister failed: %s\n", strerror(-ret));
-  } else {
-    printf("[INF] I2C unregister: %d\n", ret);
-  }
+  usleep(10000000);
 
   return 0;
 }

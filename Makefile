@@ -6,13 +6,17 @@ TARGET = \
 
 OUTPUT_DIR = build
 
+RGBLED_DIR = drivers/rpi-rgb-led-matrix
+RGBLED_LIB = $(RGBLED_DIR)/lib/librgbmatrix.a
+
 C_INCLUDES = \
-	-Iincludes
+	-Iincludes \
+	-I$(RGBLED_DIR)/include
 
-C_DRIVERS = $(shell find drivers -name "*.c")
+C_DRIVERS = $(shell find drivers -maxdepth 1 -name "*.c")
 
-CC = gcc
-CFLAGS = -g -Wall $(C_INCLUDES)
+CC = g++
+CFLAGS = -g -Wall -pthread $(C_INCLUDES)
 LDFLAGS =
 
 .PHONY: $(TARGET) MKDIR clean
@@ -22,7 +26,10 @@ all: $(TARGET)
 MKDIR:
 	@ mkdir -p $(OUTPUT_DIR)
 
-$(TARGET):%: $(C_DRIVERS) ./%/main.c | MKDIR
+$(RGBLED_LIB):
+	$(MAKE) -C $(RGBLED_DIR)/lib
+
+$(TARGET):%: $(C_DRIVERS) ./%/main.c $(RGBLED_LIB) | MKDIR
 	$(CC) $(CFLAGS) $^ -o $(OUTPUT_DIR)/$@
 
 clean:
