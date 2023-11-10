@@ -9,45 +9,30 @@
 #include "drivers/i2c.h"
 #include "drivers/adxl345.h"
 
+#include "led-matrix-c.h"
+
 int main(void) {
-  int i2c1;
-  int ret = i2c_register(I2C1, &i2c1);
+  /* configure 32*16*5 RGB LED Matrix board */
+  struct RGBLedMatrixOptions options;
+  memset(&options, 0, sizeof(options));
+  options.rows = 16;
+  options.chain_length = 5;
 
-  if (ret < 0) {
-    printf("[ERR] I2C register failed: %s\n", strerror(-ret));
-  } else {
-    printf("[INF] I2C register: %d\n", ret);
+  /* init matrix */
+  struct RGBLedMatrix *matrix;
+  matrix = led_matrix_create_from_options(&options, NULL, NULL);
+  if (matrix == NULL) {
+    return -1;
   }
 
-  adxl345_setup(i2c1);
+  /* buffer canvas */
+  struct LedCanvas *offscreen_canvas;
+  int width, height;
+  offscreen_canvas = led_matrix_create_offscreen_canvas(matrix);
+  led_canvas_get_size(offscreen_canvas, &width, &height);
 
-  if (ret < 0) {
-    printf("[ERR] ADXL345 setup failed: %s\n", strerror(-ret));
-  } else {
-    printf("[INF] ADXL345 setup: %d\n", ret);
-  }
-
-  adxl345_data data;
-
-  for (int i = 0; i < 10; i++) {
-    ret = adxl345_read(i2c1, &data);
-
-    if (ret < 0) {
-      printf("[ERR] ADXL345 read failed: %s\n", strerror(-ret));
-    } else {
-      printf("[INF] ADXL345 read: x: %lf y: %lf z: %lf\n", data.x, data.y, data.z);
-    }
-
-    usleep(100000);
-  }
-
-  ret = i2c_unregister(i2c1);
-
-  if (ret < 0) {
-    printf("[ERR] I2C unregister failed: %s\n", strerror(-ret));
-  } else {
-    printf("[INF] I2C unregister: %d\n", ret);
-  }
+  printf("Size: %dx%d. Hardware gpio mapping: %s\n",
+        width, height, options.hardware_mapping);
 
   return 0;
 }
