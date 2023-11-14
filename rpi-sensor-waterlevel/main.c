@@ -4,30 +4,35 @@
 #include <sys/socket.h>
 
 #include "types.h"
-#include "drivers/ledmatrix.h"
+
+void *thread_job_sensor(void *arg);
+void *thread_job_socket(void *arg);
 
 int main(void) {
-  int ret = ledmatrix_setup();
+  pthread_t thread_sensor;
+  pthread_t thread_socket;
 
-  if (ret < 0) {
-    return -1;
+  int tid = pthread_create(&thread_sensor, NULL, thread_job_sensor, NULL);
+
+  if (tid < 0) {
+    goto thread_err;
   }
 
-  int arr[4] = { 0, };
-
-  int cnt = 0;
-  while (1) {
-    arr[0] = (cnt * 1) % 160;
-    arr[1] = (cnt * 2) % 160;
-    arr[2] = ((cnt * 1) + 10) % 160;
-    arr[3] = ((cnt * 3) + 10) % 160;
-    ledmatrix_drawgraph(arr, sizeof(arr) / sizeof(arr[0]));
-    usleep(10000);
-
-    cnt++;
-  }
-
-  usleep(10000000);
+  tid = pthread_create(&thread_socket, NULL, thread_job_socket, NULL);
 
   return 0;
+
+thread_err:
+  printf("Thread creation failed. Terminating...\n");
+  return -1;
+}
+
+void *thread_job_sensor(void *arg) {
+  printf("collecting sensor data...\n");
+
+}
+
+void *thread_job_socket(void *arg) {
+  printf("initiating socket...\n");
+
 }
