@@ -2,7 +2,6 @@
 
 ## 1. git
 ### recommendation: [Fork](https://git-fork.com/), a GUI git client
-![](assets/image.png)
 
 ### create your working branch
 ```sh
@@ -20,9 +19,7 @@ git rebase origin/main <your_branch_name>
 #include "driviers/<driver_name>.h"
 ```
 
-### setting up socket
-Replace # in `SERVER_PORT_#` to 1/2/3
-{: .alert .alert-warning}
+### setting up a socket
 
 ```c
 #include <sys/socket.h>
@@ -33,18 +30,10 @@ Replace # in `SERVER_PORT_#` to 1/2/3
 ...
   int sock = socket(AF_INET, SOCK_STREAM, 0);
 
-  if (sock < 0) {
-    // error handling
-  }
-
   struct sockaddr_in server;
-  init_socket_server(&server, SERVER_IP, SERVER_PORT_#);
+  init_socket_server(&server, SERVER_IP, SERVER_PORT_#); // < replace SERVER_PORT_# to your port
 
   int ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
-
-  if (ret < 0) {
-    // error handling
-  }
 ...
 ```
 
