@@ -9,22 +9,43 @@
 git checkout -b feature/<your_branch_name>
 ```
 
-### merge with origin/main
-```sh
-git checkout feature/<your_branch_name> # switch to your branch
-git merge origin/main
-```
-
 ### rebase with origin/main
 ```sh
 git rebase origin/main <your_branch_name>
 ```
 
-## 2. include drivers
+## 2. programming
+### including drivers
 ```c
-#include "driviers/gpio.h"
-#include "driviers/pwm.h"
-#include "driviers/i2c.h"
+#include "driviers/<driver_name>.h"
+```
+
+### setting up socket
+Replace # in `SERVER_PORT_#` to 1/2/3
+{: .alert .alert-warning}
+
+```c
+#include <sys/socket.h>
+#include <netinet/ip.h>
+
+#include "types.h"
+
+...
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+  if (sock < 0) {
+    // error handling
+  }
+
+  struct sockaddr_in server;
+  init_socket_server(&server, SERVER_IP, SERVER_PORT_#);
+
+  int ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
+
+  if (ret < 0) {
+    // error handling
+  }
+...
 ```
 
 ## 3. build
@@ -40,7 +61,26 @@ ex) `make rpi-amp`
 
 ## 4. execute and debug
 ```sh
-./build/rpi-<your_device>
-gdb ./build/rpi-<your_device>
+./build/rpi-<your_device> # execute
+gdb ./build/rpi-<your_device> # debug
 ```
-ex) `./build/rpi-amp`, `gdb ./build/rpi-amp`
+
+## 5. mockup socket server
+### run server
+```sh
+make server-mockup
+build/server-mockup
+```
+
+#### run in background
+```sh
+build/server-mockup &
+```
+
+### set mockup server in your device
+```c
+#define SERVER_MOCK 1 // must declared before including types.h
+
+#include "types.h"
+```
+will set `SERVER_IP` to `127.0.0.1`.
