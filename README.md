@@ -38,6 +38,11 @@ git rebase origin/main <your_branch_name>
 ```
 
 ## 3. build
+### setup
+```sh
+git submodule update --init --recursive
+```
+
 ### all
 ```sh
 make
