@@ -9,6 +9,8 @@
 #define SERVER_MOCK 1
 
 #include "types.h"
+#include "drivers/i2c.h"
+#include "drivers/pcf8561.h"
 
 /* global variables */
 int result = 0;
@@ -16,7 +18,6 @@ int result = 0;
 /* function prototypes */
 void *thread_job_sensor(void *arg);
 void *thread_job_socket(void *arg);
-
 
 /**************************************************************************
  * main function
@@ -47,11 +48,32 @@ thread_fail:
  * Measures the sensor reading
  */
 void *thread_job_sensor(void *arg) {
+  printf("[SENSOR] setting up an I2C bus...\n");
+
+  int i2c1;
+  int ret = i2c_register(I2C1, &i2c1);
+
+  if (ret < 0) {
+    printf("[ERR] I2C register failed: %s\n", strerror(-ret));
+  } else {
+    printf("[INF] I2C register: %d\n", ret);
+  }
+
+  pcf8561_data data;
+
   printf("[SENSOR] collecting sensor data...\n");
 
   while (1) {
-    result++; // TODO: sensor measurement here
-    usleep(10000);
+    ret = pcf8561_read(i2c1, &data);
+
+    if (ret < 0) {
+      printf("[ERR] PCF8561 read failed: %s\n", strerror(-ret));
+    } else {
+      printf("[INF] PCF8561 read: %d %d %d %d\n", data.ain0, data.ain1, data.ain2, data.ain3);
+      result = data.ain3;
+    }
+
+    usleep(100000);
   }
 }
 
@@ -88,7 +110,7 @@ void *thread_job_socket(void *arg) {
     }
 
     printf("[SOCKET] write: %d(%d)\n", result, ret);
-    usleep(10000);
+    usleep(100000);
   }
 
 socket_fail:
