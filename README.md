@@ -49,6 +49,11 @@ Replace # in `SERVER_PORT_#` to 1/2/3
 ```
 
 ## 3. build
+### setup
+```sh
+git submodule update --init --recursive
+```
+
 ### all
 ```sh
 make
