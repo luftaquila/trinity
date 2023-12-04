@@ -26,13 +26,8 @@ int main(void) {
   pthread_t thread_socket;
   pthread_t thread_button[numButtons];
 
-  if (gpio_setup() < 0) {
-    printf("[ERR] GPIO setup failed.\n");
-    return -1;
-  }
-
   for (int i = 0; i < numButtons; ++i) {
-    if (gpio_export(buttonPins[i]) < 0) {
+    if (GPIOExport(buttonPins[i]) < 0) {
       printf("[ERR] GPIO export failed for button %d.\n", i);
       return -1;
     }
@@ -48,7 +43,7 @@ int main(void) {
     }
   }
 
-  pthread_join(thread_socket, NULL);
+  pthread_join(thread_button[0], NULL);
 
   return 0;
 
@@ -57,7 +52,7 @@ thread_fail:
 
   // Unexport GPIO before exiting
   for (int i = 0; i < numButtons; ++i) {
-    gpio_unexport(buttonPins[i]);
+    GPIOUnexport(buttonPins[i]);
   }
 
   return -1;
@@ -70,28 +65,31 @@ void *thread_job_button(void *arg) {
   int buttonPin = *((int *)arg);
   printf("[BUTTON] setting up a button on GPIO pin %d...\n", buttonPin);
 
-  if (gpio_set_direction(buttonPin, INPUT) < 0) {
+  if (GPIODirection(buttonPin, IN) < 0) {
     printf("[ERR] Failed to set GPIO direction for the button.\n");
     pthread_exit((void *) -1);
   }
 
-  while (1) {
-    int buttonState = gpio_read(buttonPin);
+  int lastbuttonState = 1;
 
-    if (buttonState == 0) {
+  while (1) {
+    int buttonState = GPIORead(buttonPin);
+
+    if (buttonState == 0 && lastbuttonState == 1) {
       printf("[BUTTON] Button on GPIO pin %d pressed!\n", buttonPin);
 
-      // Check which button is pressed and update the corresponding variable
       if (buttonPin == volumeUpButtonPin) {
         result = 1; // Set result to 1 for volume up
       } else if (buttonPin == volumeDownButtonPin) {
         result = -1; // Set result to -1 for volume down
+      } else {
+        result = buttonPin; // Set result to the pressed button
       }
-      result = buttonPin;
 
-      usleep(100000); // Debouncing delay to prevent multiple presses
+      usleep(1000000); // Debouncing delay to prevent multiple presses
     }
 
+    lastbuttonState = buttonState;
     usleep(100000);
   }
 }
