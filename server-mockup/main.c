@@ -10,23 +10,18 @@
 
 void *thread_job_server_mock(void *arg);
 
-int main()
-{
-  int ports[SERVER_PORT_CNT] = {SERVER_PORT_1, SERVER_PORT_2, SERVER_PORT_3};
-  pthread_t threads[SERVER_PORT_CNT];
+int main() {
+  int port = SERVER_PORT;
+  pthread_t thread;
 
-  for (int i = 0; i < SERVER_PORT_CNT; i++)
-  {
-    pthread_create(&threads[i], NULL, thread_job_server_mock, &ports[i]);
-  }
+  pthread_create(&thread, NULL, thread_job_server_mock, &port);
 
-  pthread_join(threads[0], NULL);
+  pthread_join(thread, NULL);
 
   return 0;
 }
 
-void *thread_job_server_mock(void *arg)
-{
+void *thread_job_server_mock(void *arg) {
   int port = *(int *)arg;
   int sock = socket(AF_INET, SOCK_STREAM, 0);
 

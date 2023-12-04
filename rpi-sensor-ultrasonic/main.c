@@ -13,8 +13,6 @@
 
 #include "drivers/gpio.h"
 
-/* MOCKUP SERVER configuration */
-#define SERVER_MOCK 1
 #include "types.h"
 
 #define POUT 23

@@ -13,10 +13,7 @@
 #define SERVER_IP "192.168.31.2"
 #endif
 
-#define SERVER_PORT_CNT 3
-#define SERVER_PORT_1  5001
-#define SERVER_PORT_2  5002
-#define SERVER_PORT_3  5003
+#define SERVER_PORT  5000
 
 /**************************************************************************
  * initialize socket server info
