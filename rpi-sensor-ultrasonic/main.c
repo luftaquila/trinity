@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -18,15 +19,18 @@
 
 #define POUT 23
 #define PIN 24
+#define POUT2 5
+#define PIN2 6
 #define REPEAT_MAX 4
 
-/* global variables */
-int result = 0;
+pthread_mutex_t decay_number_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int result[2];
 double filterValue = 0;
 int repeat = 0;
 
-/* function prototypes */
 void *thread_job_sensor(void *arg);
+void *thread_job_sensor2(void *arg);
 void *thread_job_socket(void *arg);
 
 int main(int argc, char *argv[])
@@ -39,6 +43,10 @@ int main(int argc, char *argv[])
   if (pthread_create(&thread_sensor, NULL, thread_job_sensor, NULL) < 0)
   {
     printf("thread_job_sensor failed\n");
+  }
+  if (pthread_create(&thread_sensor, NULL, thread_job_sensor2, NULL) < 0)
+  {
+    printf("second thread_job_sensor failed\n");
   }
   if (pthread_create(&thread_socket, NULL, thread_job_socket, NULL) < 0)
   {
@@ -55,25 +63,22 @@ void *thread_job_sensor(void *arg)
   clock_t start_t, end_t;
   double time;
 
-  printf("[SENSOR] collecting sensor data...\n");
+  printf("[SENSOR] collecting sensor data1...\n");
 
-  // Enable GPIO pins
   if (-1 == GPIOExport(POUT) || -1 == GPIOExport(PIN))
   {
     printf("gpio export err\n");
     goto job_fail;
   }
-  // wait for writing to export file
+
   usleep(100000);
 
-  // Set GPIO directions
   if (-1 == GPIODirection(POUT, OUT) || -1 == GPIODirection(PIN, IN))
   {
     printf("gpio direction err\n");
     goto job_fail;
   }
 
-  // init ultrawave trigger
   GPIOWrite(POUT, 0);
   usleep(20000);
 
@@ -100,23 +105,20 @@ void *thread_job_sensor(void *arg)
     time = (double)(end_t - start_t) / CLOCKS_PER_SEC; // ms
     double distance = time / 2 * 34000;
 
-    printf("distance: %.2f\n", distance);
-
     filterValue += distance;
-    printf("filterValue:  %.2f\n", filterValue);
 
     repeat++;
 
     if (repeat == REPEAT_MAX)
     {
-      result = filterValue / 5;
+      result[0] = ((int)filterValue / 5) % 150;
+      printf("result 1: %d\n", result[0]);
       filterValue = 0;
       repeat = 0;
     }
     usleep(20000);
   } while (1);
 
-  // Disable GPIO pins
   if (-1 == GPIOUnexport(POUT) || -1 == GPIOUnexport(PIN))
     goto job_fail;
 
@@ -125,6 +127,78 @@ void *thread_job_sensor(void *arg)
 job_fail:
   printf("[SOCKET] socket connection failed\n");
   pthread_exit((void *)-1);
+}
+
+void *thread_job_sensor2(void *arg)
+{
+  {
+    clock_t start_t, end_t;
+    double time;
+
+    printf("[SENSOR] collecting sensor data2...\n");
+
+    if (-1 == GPIOExport(POUT2) || -1 == GPIOExport(PIN2))
+    {
+      printf("gpio export err\n");
+      goto job_fail;
+    }
+    usleep(100000);
+
+    if (-1 == GPIODirection(POUT2, OUT) || -1 == GPIODirection(PIN2, IN))
+    {
+      printf("gpio direction err\n");
+      goto job_fail;
+    }
+
+    GPIOWrite(POUT2, 0);
+    usleep(20000);
+
+    do
+    {
+      if (-1 == GPIOWrite(POUT2, 1))
+      {
+        printf("gpio write/trigger err\n");
+        goto job_fail;
+      }
+
+      usleep(10);
+      GPIOWrite(POUT2, 0);
+
+      while (GPIORead(PIN2) == 0)
+      {
+        start_t = clock();
+      }
+      while (GPIORead(PIN2) == 1)
+      {
+        end_t = clock();
+      }
+
+      time = (double)(end_t - start_t) / CLOCKS_PER_SEC; // ms
+      double distance = time / 2 * 34000;
+
+      filterValue += distance;
+
+      repeat++;
+
+      if (repeat == REPEAT_MAX)
+      {
+        result[1] = ((int)filterValue / 5) % 150;
+        printf("result 2: %d\n", result[1]);
+        filterValue = 0;
+        repeat = 0;
+      }
+      usleep(20000);
+    } while (1);
+
+    if (-1 == GPIOUnexport(POUT2) || -1 == GPIOUnexport(PIN2))
+      goto job_fail;
+
+    return NULL;
+
+  job_fail:
+    printf("[SOCKET] socket connection failed\n");
+    pthread_exit((void *)-1);
+  }
 }
 
 void *thread_job_socket(void *arg)
@@ -153,14 +227,14 @@ void *thread_job_socket(void *arg)
 
   while (1)
   {
-    ret = write(sock, &result, sizeof(result));
+    ret = write(sock, result, sizeof(result));
 
     if (ret < 0)
     {
       printf("[SOCKET] write failed: %s\n", strerror(errno));
     }
 
-    printf("[SOCKET] write: %d(%d)\n", result, ret);
+    printf("[SOCKET] write: %d %d(%d)\n", result[0], result[1], ret);
     usleep(100000);
   }
 
