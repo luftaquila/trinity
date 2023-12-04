@@ -1,3 +1,6 @@
 [submodule "drivers/rpi-rgb-led-matrix"]
 	path = drivers/rpi-rgb-led-matrix
 	url = https://github.com/hzeller/rpi-rgb-led-matrix.git
+[submodule "rpi-amp"]
+	path = rpi-amp
+	url = https://github.com/imdongye/rpi-amp.git
