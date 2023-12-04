@@ -13,7 +13,7 @@
 #include "drivers/pcf8561.h"
 
 /* global variables */
-int result = 0;
+payload_t payload;
 
 /* function prototypes */
 void *thread_job_sensor(void *arg);
@@ -25,6 +25,8 @@ void *thread_job_socket(void *arg);
 int main(void) {
   pthread_t thread_sensor;
   pthread_t thread_socket;
+
+  payload.id = ID_WATERLEVEL;
 
   if (pthread_create(&thread_sensor, NULL, thread_job_sensor, NULL) < 0) {
     goto thread_fail;
@@ -70,7 +72,9 @@ void *thread_job_sensor(void *arg) {
       printf("[ERR] PCF8561 read failed: %s\n", strerror(-ret));
     } else {
       printf("[INF] PCF8561 read: %d %d %d %d\n", data.ain0, data.ain1, data.ain2, data.ain3);
-      result = data.ain3;
+
+      payload.note = data.ain2;
+      payload.volume = data.ain3;
     }
 
     usleep(100000);
@@ -93,7 +97,7 @@ void *thread_job_socket(void *arg) {
   }
 
   struct sockaddr_in server;
-  init_socket_server(&server, SERVER_IP, SERVER_PORT_3);
+  init_socket_server(&server, SERVER_IP, SERVER_PORT);
 
   printf("[SOCKET] waiting for server...\n");
   ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
@@ -103,13 +107,14 @@ void *thread_job_socket(void *arg) {
   }
 
   while (1) {
-    ret = write(sock, &result, sizeof(result));
+    ret = write(sock, &payload, sizeof(payload));
 
     if (ret < 0) {
       printf("[SOCKET] write failed: %s\n", strerror(errno));
     }
 
-    printf("[SOCKET] write: %d(%d)\n", result, ret);
+    printf("[SERVER] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload.id, payload.note, payload.volume);
+
     usleep(100000);
   }
 
