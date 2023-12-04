@@ -1,9 +1,9 @@
 TARGET = \
-	rpi-amp \
 	rpi-sensor-buttons \
 	rpi-sensor-ultrasonic \
 	rpi-sensor-waterlevel \
 	server-mockup
+	# rpi-amp
 
 OUTPUT_DIR = build
 
