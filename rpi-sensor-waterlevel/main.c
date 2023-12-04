@@ -15,6 +15,7 @@
 
 /* global variables */
 int i2c1;
+pthread_mutex_t lock;
 payload_t payload_adc;
 payload_t payload_accel;
 
@@ -74,8 +75,9 @@ void *thread_job_adc(void *arg) {
   printf("[   ADC] collecting PCF8561 ADC data...\n");
 
   while (1) {
-    // TODO: lock system required
+    pthread_mutex_lock(&lock);
     int ret = pcf8561_read(i2c1, &data);
+    pthread_mutex_unlock(&lock);
 
     if (ret < 0) {
       printf("[ERR] PCF8561 read failed: %s\n", strerror(-ret));
@@ -95,8 +97,9 @@ void *thread_job_adc(void *arg) {
 void *thread_job_accel(void *arg) {
   adxl345_data data;
 
-  // TODO: lock system required
+  pthread_mutex_lock(&lock);
   int ret = adxl345_setup(i2c1);
+  pthread_mutex_unlock(&lock);
 
   if (ret < 0) {
     printf("[ERR] ADXL345 setup failed: %s\n", strerror(-ret));
@@ -107,11 +110,12 @@ void *thread_job_accel(void *arg) {
   printf("[ ACCEL] collecting ADXL345 accelerometer data...\n");
 
   while (1) {
-    // TODO: lock system required
+    pthread_mutex_lock(&lock);
     ret = adxl345_read(i2c1, &data);
+    pthread_mutex_unlock(&lock);
 
     if (ret < 0) {
-      printf("[ERR] PCF8561 read failed: %s\n", strerror(-ret));
+      printf("[ERR] ADXL345 read failed: %s\n", strerror(-ret));
     } else {
       // TODO: fine tuning data range required
       payload_accel.note = data.x;
