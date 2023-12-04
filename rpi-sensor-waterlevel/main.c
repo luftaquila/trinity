@@ -11,24 +11,43 @@
 #include "types.h"
 #include "drivers/i2c.h"
 #include "drivers/pcf8561.h"
+#include "drivers/adxl345.h"
 
 /* global variables */
-payload_t payload;
+int i2c1;
+payload_t payload_adc;
+payload_t payload_accel;
 
 /* function prototypes */
-void *thread_job_sensor(void *arg);
+void *thread_job_adc(void *arg);
+void *thread_job_accel(void *arg);
 void *thread_job_socket(void *arg);
 
 /**************************************************************************
  * main function
  */
 int main(void) {
+  printf("[  MAIN ] setting up a I2C bus...\n");
+
+  int ret = i2c_register(I2C1, &i2c1);
+
+  if (ret < 0) {
+    printf("[ERR] I2C register failed: %s\n", strerror(-ret));
+  } else {
+    printf("[INF] I2C register: %d\n", ret);
+  }
+
   pthread_t thread_sensor;
   pthread_t thread_socket;
 
-  payload.id = ID_WATERLEVEL;
+  payload_adc.id = ID_WATERLEVEL;
+  payload_accel.id = ID_ACCEL;
 
-  if (pthread_create(&thread_sensor, NULL, thread_job_sensor, NULL) < 0) {
+  if (pthread_create(&thread_sensor, NULL, thread_job_adc, NULL) < 0) {
+    goto thread_fail;
+  }
+
+  if (pthread_create(&thread_sensor, NULL, thread_job_accel, NULL) < 0) {
     goto thread_fail;
   }
 
@@ -47,34 +66,56 @@ thread_fail:
 
 
 /**************************************************************************
- * Measures the sensor reading
+ * Measures the PCF8561 ADC reading
  */
-void *thread_job_sensor(void *arg) {
-  printf("[SENSOR] setting up an I2C bus...\n");
-
-  int i2c1;
-  int ret = i2c_register(I2C1, &i2c1);
-
-  if (ret < 0) {
-    printf("[ERR] I2C register failed: %s\n", strerror(-ret));
-  } else {
-    printf("[INF] I2C register: %d\n", ret);
-  }
-
+void *thread_job_adc(void *arg) {
   pcf8561_data data;
 
-  printf("[SENSOR] collecting sensor data...\n");
+  printf("[   ADC] collecting PCF8561 ADC data...\n");
 
   while (1) {
-    ret = pcf8561_read(i2c1, &data);
+    // TODO: lock system required
+    int ret = pcf8561_read(i2c1, &data);
 
     if (ret < 0) {
       printf("[ERR] PCF8561 read failed: %s\n", strerror(-ret));
     } else {
-      printf("[INF] PCF8561 read: %d %d %d %d\n", data.ain0, data.ain1, data.ain2, data.ain3);
+      payload_adc.note = data.ain2;
+      payload_adc.volume = data.ain3;
+    }
 
-      payload.note = data.ain2;
-      payload.volume = data.ain3;
+    usleep(100000);
+  }
+}
+
+
+/**************************************************************************
+ * Measures the ADXL345 accelerometer reading
+ */
+void *thread_job_accel(void *arg) {
+  adxl345_data data;
+
+  // TODO: lock system required
+  int ret = adxl345_setup(i2c1);
+
+  if (ret < 0) {
+    printf("[ERR] ADXL345 setup failed: %s\n", strerror(-ret));
+  } else {
+    printf("[ ACCEL] ADXL345 setup: %d\n", ret);
+  }
+
+  printf("[ ACCEL] collecting ADXL345 accelerometer data...\n");
+
+  while (1) {
+    // TODO: lock system required
+    ret = adxl345_read(i2c1, &data);
+
+    if (ret < 0) {
+      printf("[ERR] PCF8561 read failed: %s\n", strerror(-ret));
+    } else {
+      // TODO: fine tuning data range required
+      payload_accel.note = data.x;
+      payload_accel.volume = data.y;
     }
 
     usleep(100000);
@@ -107,13 +148,23 @@ void *thread_job_socket(void *arg) {
   }
 
   while (1) {
-    ret = write(sock, &payload, sizeof(payload));
+    /* ADC value transmission */
+    ret = write(sock, &payload_adc, sizeof(payload_t));
 
     if (ret < 0) {
       printf("[SOCKET] write failed: %s\n", strerror(errno));
     }
 
-    printf("[SERVER] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload.id, payload.note, payload.volume);
+    printf("[SERVER] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_adc.id, payload_adc.note, payload_adc.volume);
+
+    /* acceleromter value transmission */
+    ret = write(sock, &payload_accel, sizeof(payload_t));
+
+    if (ret < 0) {
+      printf("[SOCKET] write failed: %s\n", strerror(errno));
+    }
+
+    printf("[SERVER] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_accel.id, payload_accel.note, payload_accel.volume);
 
     usleep(100000);
   }
