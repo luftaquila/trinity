@@ -41,17 +41,16 @@ void *thread_job_server_mock(void *arg) {
   int fd = accept(sock, (struct sockaddr *)&client, &len);
   printf("[SERVER] socket establishment on %d\n", port);
 
-  int rcv[2];
-  while (1)
-  {
+  payload_t rcv;
+
+  while (1) {
     int ret = read(fd, &rcv, sizeof(rcv));
 
-    if (ret < 0)
-    {
+    if (ret < 0) {
       printf("[SOCKET] read failed: %s\n", strerror(errno));
     }
 
-    printf("[SERVER] [%d] rcv: (%d, %d)\n", port, rcv[0], rcv[1]);
+    printf("[SERVER] rcv: { id: %d, note: %d, volume: %d }\n", rcv.id, rcv.note, rcv.volume);
     usleep(10000);
   }
 
