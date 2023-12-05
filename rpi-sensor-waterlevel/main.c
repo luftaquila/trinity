@@ -147,6 +147,7 @@ void *thread_job_socket(void *arg) {
   printf("[SOCKET] server: %s\n", SERVER_IP);
   printf("[SOCKET] initiating socket...\n");
 
+  int ret;
   int sock = socket(AF_INET, SOCK_STREAM, 0);
 
   if (sock < 0) {
@@ -157,7 +158,7 @@ void *thread_job_socket(void *arg) {
   init_socket_server(&server, SERVER_IP, SERVER_PORT);
 
   printf("[SOCKET] waiting for server...\n");
-  int ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
+  ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
 
   if (ret < 0) {
     goto socket_fail;
@@ -202,6 +203,7 @@ void *thread_job_display(void *arg) {
   printf("[   LED] server: %s\n", SERVER_IP);
   printf("[   LED] initiating socket...\n");
 
+  int ret;
   int sock = socket(AF_INET, SOCK_STREAM, 0);
 
   if (sock < 0) {
@@ -212,7 +214,7 @@ void *thread_job_display(void *arg) {
   init_socket_server(&server, SERVER_IP, SERVER_PORT + 1);
 
   printf("[   LED] waiting for server...\n");
-  int ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
+  ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
 
   if (ret < 0) {
     goto socket_fail;
