@@ -221,6 +221,12 @@ void *thread_job_display(void *arg) {
   while (1) {
     /* read and draw display graph */
     ret = read(sock, display_data, sizeof(display_data));
+
+    /* adjust graph range */
+    for (int i = 0; i < 4; i++) {
+      display_data[i] += 20;
+    }
+
     ledmatrix_drawgraph(display_data, 4);
 
     usleep(20000); // 50Hz update
