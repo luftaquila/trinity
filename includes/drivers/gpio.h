@@ -1,11 +1,6 @@
 #ifndef __DRIVER_GPIO_H
 #define __DRIVER_GPIO_H
 
-#include <stdio.h>
-#include <fcntl.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 #define BUFFER_MAX 3
 #define DIRECTION_MAX 45
