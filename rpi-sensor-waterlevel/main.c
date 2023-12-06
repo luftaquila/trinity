@@ -37,7 +37,7 @@ int main(void) {
   int ret = i2c_register(I2C1, &i2c1);
 
   if (ret < 0) {
-    printf("[ERR] I2C register failed: %s\n", strerror(-ret));
+    printf("[   ERR] I2C register failed: %s\n", strerror(-ret));
   } else {
     printf("[INF] I2C register: %d\n", ret);
   }
@@ -94,7 +94,7 @@ void *thread_job_adc(void *arg) {
     pthread_mutex_unlock(&lock);
 
     if (ret < 0) {
-      printf("[ERR] PCF8561 read failed: %s\n", strerror(-ret));
+      printf("[   ERR] PCF8561 read failed: %s\n", strerror(-ret));
     } else {
       payload_adc.note = data.ain2;
       payload_adc.volume = (payload_adc.note < 30 ) ? 0 : data.ain3;
@@ -116,7 +116,7 @@ void *thread_job_accel(void *arg) {
   pthread_mutex_unlock(&lock);
 
   if (ret < 0) {
-    printf("[ERR] ADXL345 setup failed: %s\n", strerror(-ret));
+    printf("[   ERR] ADXL345 setup failed: %s\n", strerror(-ret));
   } else {
     printf("[ ACCEL] ADXL345 setup: %d\n", ret);
   }
@@ -129,7 +129,7 @@ void *thread_job_accel(void *arg) {
     pthread_mutex_unlock(&lock);
 
     if (ret < 0) {
-      printf("[ERR] ADXL345 read failed: %s\n", strerror(-ret));
+      printf("[   ERR] ADXL345 read failed: %s\n", strerror(-ret));
     } else {
       // filter positive G and fit to data range
       double vector = sqrt(pow(data.x, 2) + pow(data.y, 2) + pow(data.z, 2));
@@ -167,6 +167,8 @@ void *thread_job_socket(void *arg) {
     goto socket_fail;
   }
 
+  printf("[SOCKET] server online\n");
+
   while (1) {
     /* ADC value transmission */
     ret = write(sock, &payload_adc, sizeof(payload_t));
@@ -199,10 +201,18 @@ socket_fail:
  * read data from server and draw on the 160*16 LED display
  */
 void *thread_job_display(void *arg) {
+  printf("[   LED] setting up a panel...\n");
+
+  int ret = ledmatrix_setup();
+
+  if (ret < 0) {
+    printf("[   ERR] LED setup failed: %d\n", ret);
+    return NULL;
+  }
+
   printf("[   LED] server: %s\n", SERVER_IP);
   printf("[   LED] initiating socket...\n");
 
-  int ret;
   int sock = socket(AF_INET, SOCK_STREAM, 0);
 
   if (sock < 0) {
@@ -229,7 +239,7 @@ void *thread_job_display(void *arg) {
     }
 
     ledmatrix_drawgraph(display_data, 4);
-    usleep(20000); // 50Hz update rate
+    /* usleep(20000); // 50Hz update rate */
   }
 
 socket_fail:
