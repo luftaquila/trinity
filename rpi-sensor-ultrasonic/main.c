@@ -13,19 +13,19 @@
 
 #include "drivers/gpio.h"
 
+// #define SERVER_MOCK 1
 #include "types.h"
 
 #define POUT 23
 #define PIN 24
 #define POUT2 5
 #define PIN2 6
-#define REPEAT_MAX 4
+#define REPEAT_MAX 5
 
 pthread_mutex_t decay_number_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int result[2];
+payload_t result;
 double filterValue = 0;
-int repeat = 0;
 
 void *thread_job_sensor(void *arg);
 void *thread_job_sensor2(void *arg);
@@ -37,6 +37,7 @@ int main(int argc, char *argv[])
   pthread_t thread_socket;
 
   printf("complete\n");
+  result.id = ID_ULTRASONIC;
 
   if (pthread_create(&thread_sensor, NULL, thread_job_sensor, NULL) < 0)
   {
@@ -60,6 +61,7 @@ void *thread_job_sensor(void *arg)
 {
   clock_t start_t, end_t;
   double time;
+  int repeat1 = 0;
 
   printf("[SENSOR] collecting sensor data1...\n");
 
@@ -69,7 +71,7 @@ void *thread_job_sensor(void *arg)
     goto job_fail;
   }
 
-  usleep(100000);
+  usleep(20000);
 
   if (-1 == GPIODirection(POUT, OUT) || -1 == GPIODirection(PIN, IN))
   {
@@ -101,18 +103,22 @@ void *thread_job_sensor(void *arg)
     }
 
     time = (double)(end_t - start_t) / CLOCKS_PER_SEC; // ms
-    double distance = time / 2 * 34000;
+    double distance = (time / 2) * 34000;
 
     filterValue += distance;
 
-    repeat++;
+    repeat1++;
 
-    if (repeat == REPEAT_MAX)
+    if (repeat1 == REPEAT_MAX)
     {
-      result[0] = ((int)filterValue / 5) % 150;
-      printf("result 1: %d\n", result[0]);
+      int val = ((int)filterValue / 5);
+      if (val <= 150)
+      {
+        result.note = val;
+      }
+      printf("result note: %d\n", result.note);
       filterValue = 0;
-      repeat = 0;
+      repeat1 = 0;
     }
     usleep(20000);
   } while (1);
@@ -132,6 +138,7 @@ void *thread_job_sensor2(void *arg)
   {
     clock_t start_t, end_t;
     double time;
+    int repeat2 = 0;
 
     printf("[SENSOR] collecting sensor data2...\n");
 
@@ -149,7 +156,7 @@ void *thread_job_sensor2(void *arg)
     }
 
     GPIOWrite(POUT2, 0);
-    usleep(20000);
+    usleep(100000);
 
     do
     {
@@ -172,20 +179,24 @@ void *thread_job_sensor2(void *arg)
       }
 
       time = (double)(end_t - start_t) / CLOCKS_PER_SEC; // ms
-      double distance = time / 2 * 34000;
+      double distance = (time / 2) * 34000;
 
       filterValue += distance;
 
-      repeat++;
+      repeat2++;
 
-      if (repeat == REPEAT_MAX)
+      if (repeat2 == REPEAT_MAX)
       {
-        result[1] = ((int)filterValue / 5) % 150;
-        printf("result 2: %d\n", result[1]);
+        int val = (int)filterValue / 5;
+        if (val <= 100)
+        {
+          result.volume = val;
+        }
+        printf("result volume: %d\n", result.volume);
         filterValue = 0;
-        repeat = 0;
+        repeat2 = 0;
       }
-      usleep(20000);
+      usleep(100000);
     } while (1);
 
     if (-1 == GPIOUnexport(POUT2) || -1 == GPIOUnexport(PIN2))
@@ -213,7 +224,7 @@ void *thread_job_socket(void *arg)
   }
 
   struct sockaddr_in server;
-  init_socket_server(&server, SERVER_IP, SERVER_PORT_3);
+  init_socket_server(&server, SERVER_IP, SERVER_PORT);
 
   printf("[SOCKET] waiting for server...\n");
   ret = connect(sock, (struct sockaddr *)&server, sizeof(server));
@@ -225,14 +236,14 @@ void *thread_job_socket(void *arg)
 
   while (1)
   {
-    ret = write(sock, result, sizeof(result));
+    ret = write(sock, &result, sizeof(result));
 
     if (ret < 0)
     {
       printf("[SOCKET] write failed: %s\n", strerror(errno));
     }
 
-    printf("[SOCKET] write: %d %d(%d)\n", result[0], result[1], ret);
+    printf("[SOCKET] write: %d %d %d(%d)\n", result.id, result.note, result.volume, ret);
     usleep(100000);
   }
 
