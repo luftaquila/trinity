@@ -62,7 +62,7 @@ void *thread_job_sensor(void *arg)
   clock_t start_t, end_t;
   double time;
 
-  printf("[SENSOR] collecting sensor data1...\n");
+  printf("[SENSOR] collecting sensor note...\n");
 
   if (-1 == GPIOExport(POUT) || -1 == GPIOExport(PIN))
   {
@@ -84,7 +84,7 @@ void *thread_job_sensor(void *arg)
   {
     if (-1 == GPIOWrite(POUT, 1))
     {
-      printf("gpio write/trigger err\n");
+      printf("gpio write err\n");
       goto job_fail;
     }
 
@@ -103,7 +103,7 @@ void *thread_job_sensor(void *arg)
     time = (double)(end_t - start_t) / CLOCKS_PER_SEC;
     double distance = (time / 2) * 34000;
 
-    if (distance <= 150 && distance >= 40)
+    if (distance <= 90 && distance >= 40)
     {
       result.note = (int)distance;
     }
@@ -113,11 +113,11 @@ void *thread_job_sensor(void *arg)
     }
     else
     {
-      result.note = 150;
+      result.note = result.note - 2;
     }
     printf("result note: %d\n", result.note);
 
-    usleep(50000);
+    usleep(100000);
   } while (1);
 
   if (-1 == GPIOUnexport(POUT) || -1 == GPIOUnexport(PIN))
@@ -136,7 +136,7 @@ void *thread_job_sensor2(void *arg)
     clock_t start_t, end_t;
     double time;
 
-    printf("[SENSOR] collecting sensor data2...\n");
+    printf("[SENSOR] collecting sensor voluem...\n");
 
     if (-1 == GPIOExport(POUT2) || -1 == GPIOExport(PIN2))
     {
@@ -158,7 +158,7 @@ void *thread_job_sensor2(void *arg)
     {
       if (-1 == GPIOWrite(POUT2, 1))
       {
-        printf("gpio write/trigger err\n");
+        printf("gpio write err\n");
         goto job_fail;
       }
 
@@ -186,7 +186,7 @@ void *thread_job_sensor2(void *arg)
       }
       else
       {
-        result.volume = 100;
+        result.volume = result.volume - 2;
       }
       printf("result volume: %d\n", result.volume);
 
