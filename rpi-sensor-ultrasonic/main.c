@@ -214,19 +214,17 @@ void *thread_job_socket(void *arg)
 
   while (1)
   {
-    ret = write(sock, &result, sizeof(result));
-
-    if (ret < 0)
+    if (result.note > 40)
     {
-      printf("[SOCKET] write failed: %s\n", strerror(errno));
+      ret = write(sock, &result, sizeof(result));
+      if (ret < 0)
+      {
+        printf("[SOCKET] write failed: %s\n", strerror(errno));
+      }
+
+      printf("[SOCKET] write: %d %d %d(%d)\n", result.id, result.note, result.volume, ret);
     }
 
-    if (result.note < 40)
-    {
-      continue;
-    }
-
-    printf("[SOCKET] write: %d %d %d(%d)\n", result.id, result.note, result.volume, ret);
     usleep(100000);
   }
 
