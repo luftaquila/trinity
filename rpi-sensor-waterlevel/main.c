@@ -7,7 +7,7 @@
 #include <netinet/ip.h>
 
 /* MOCKUP SERVER configuration */
-#define SERVER_MOCK 1
+/* #define SERVER_MOCK 1 */
 
 #include "types.h"
 #include "drivers/i2c.h"
@@ -32,7 +32,7 @@ void *thread_job_display(void *arg);
  * main function
  */
 int main(void) {
-  printf("[  MAIN ] setting up a I2C bus...\n");
+  printf("[  MAIN] setting up a I2C bus...\n");
 
   int ret = i2c_register(I2C1, &i2c1);
 
@@ -229,8 +229,7 @@ void *thread_job_display(void *arg) {
     }
 
     ledmatrix_drawgraph(display_data, 4);
-
-    usleep(20000); // 50Hz update
+    usleep(20000); // 50Hz update rate
   }
 
 socket_fail:
