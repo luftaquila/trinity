@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
@@ -96,7 +97,7 @@ void *thread_job_adc(void *arg) {
       printf("[ERR] PCF8561 read failed: %s\n", strerror(-ret));
     } else {
       payload_adc.note = data.ain2;
-      payload_adc.volume = data.ain3;
+      payload_adc.volume = (payload_adc.note < 30 ) ? 0 : data.ain3;
     }
 
     usleep(100000);
@@ -131,8 +132,10 @@ void *thread_job_accel(void *arg) {
       printf("[ERR] ADXL345 read failed: %s\n", strerror(-ret));
     } else {
       // filter positive G and fit to data range
-      payload_accel.note = (int)((data.z < 0.0) ? (data.z * -1.0) : 0.0) * 20;
-      payload_accel.volume = 80; // fixed volume
+      double vector = sqrt(pow(data.x, 2) + pow(data.y, 2) + pow(data.z, 2));
+      vector = fabs(vector - 1.0) * 20.0; // postprocessing g vector
+      payload_accel.note = (int)vector;
+      payload_accel.volume = (payload_accel.note < 30) ? 0 : 80; // fixed volume
     }
 
     usleep(100000);
@@ -173,6 +176,7 @@ void *thread_job_socket(void *arg) {
     }
 
     printf("[SOCKET] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_adc.id, payload_adc.note, payload_adc.volume);
+    usleep(100000); // transmission delay 100ms
 
     /* acceleromter value transmission */
     ret = write(sock, &payload_accel, sizeof(payload_t));
@@ -182,7 +186,6 @@ void *thread_job_socket(void *arg) {
     }
 
     printf("[SOCKET] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_accel.id, payload_accel.note, payload_accel.volume);
-
     usleep(100000); // transmission delay 100ms
   }
 
