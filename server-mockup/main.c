@@ -14,7 +14,11 @@ int main() {
   int port = SERVER_PORT;
   pthread_t thread;
 
+  int port1 = 5001;
+  pthread_t thread1;
+
   pthread_create(&thread, NULL, thread_job_server_mock, &port);
+  pthread_create(&thread1, NULL, thread_job_server_mock, &port1);
 
   pthread_join(thread, NULL);
 

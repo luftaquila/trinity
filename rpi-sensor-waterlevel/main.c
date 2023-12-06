@@ -183,10 +183,6 @@ void *thread_job_socket(void *arg) {
 
     printf("[SOCKET] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_accel.id, payload_accel.note, payload_accel.volume);
 
-    /* read and draw display graph */
-    ret = read(sock, display_data, sizeof(display_data));
-    ledmatrix_drawgraph(display_data, 4);
-
     usleep(100000); // transmission delay 100ms
   }
 
