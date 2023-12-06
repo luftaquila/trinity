@@ -116,13 +116,16 @@ void *thread_job_adc(void *arg) {
       payload_adc.volume = (payload_adc.note < 30 ) ? 0 : data.ain3;
     }
 
-    ret = write(sock, &payload_adc, sizeof(payload_t));
+    // skip transmission on empty note
+    if (payload_adc.note > 30) {
+      ret = write(sock, &payload_adc, sizeof(payload_t));
 
-    if (ret < 0) {
-      printf("[   ADC] write failed: %s\n", strerror(errno));
+      if (ret < 0) {
+        printf("[   ADC] write failed: %s\n", strerror(errno));
+      }
+
+      printf("[   ADC] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_adc.id, payload_adc.note, payload_adc.volume);
     }
-
-    printf("[   ADC] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_adc.id, payload_adc.note, payload_adc.volume);
 
     usleep(100000); // 100ms delay
   }
@@ -177,13 +180,16 @@ void *thread_job_accel(void *arg) {
       payload_accel.volume = (payload_accel.note < 30) ? 0 : 80; // fixed volume
     }
 
-    ret = write(sock, &payload_accel, sizeof(payload_t));
+    // skip transmission on empty note
+    if (payload_accel.note > 30) {
+      ret = write(sock, &payload_accel, sizeof(payload_t));
 
-    if (ret < 0) {
-      printf("[ ACCEL] write failed: %s\n", strerror(errno));
+      if (ret < 0) {
+        printf("[ ACCEL] write failed: %s\n", strerror(errno));
+      }
+
+      printf("[ ACCEL] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_accel.id, payload_accel.note, payload_accel.volume);
     }
-
-    printf("[ ACCEL] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_accel.id, payload_accel.note, payload_accel.volume);
 
     usleep(100000); // 100ms delay
   }

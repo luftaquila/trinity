@@ -13,7 +13,7 @@
 
 #include "drivers/gpio.h"
 
-#define SERVER_MOCK 1
+// #define SERVER_MOCK 1
 #include "types.h"
 
 #define POUT 23
@@ -107,14 +107,6 @@ void *thread_job_sensor(void *arg)
     {
       result.note = (int)distance;
     }
-    else if (distance < 40)
-    {
-      result.note = 40;
-    }
-    else
-    {
-      result.note = result.note - 2;
-    }
     printf("result note: %d\n", result.note);
 
     usleep(100000);
@@ -180,14 +172,6 @@ void *thread_job_sensor2(void *arg)
       {
         result.volume = (int)distance;
       }
-      else if (distance < 40)
-      {
-        result.volume = 40;
-      }
-      else
-      {
-        result.volume = result.volume - 2;
-      }
       printf("result volume: %d\n", result.volume);
 
       usleep(100000);
@@ -235,6 +219,11 @@ void *thread_job_socket(void *arg)
     if (ret < 0)
     {
       printf("[SOCKET] write failed: %s\n", strerror(errno));
+    }
+
+    if (result.note < 40)
+    {
+      continue;
     }
 
     printf("[SOCKET] write: %d %d %d(%d)\n", result.id, result.note, result.volume, ret);
