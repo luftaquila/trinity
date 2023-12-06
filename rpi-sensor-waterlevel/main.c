@@ -16,35 +16,45 @@
 #include "drivers/ledmatrix.h"
 
 /* global variables */
+// i2c bus and lock
 int i2c1;
 pthread_mutex_t lock;
+
+// socket payload
 payload_t payload_adc;
 payload_t payload_accel;
+
+// LED display value
 int display_data[4];
+
+// target remote server
+struct sockaddr_in server;
 
 /* function prototypes */
 void *thread_job_adc(void *arg);
 void *thread_job_accel(void *arg);
-void *thread_job_socket(void *arg);
 void *thread_job_display(void *arg);
 
 /**************************************************************************
  * main function
  */
 int main(void) {
-  printf("[  MAIN] setting up a I2C bus...\n");
+  // set remote server
+  init_socket_server(&server, SERVER_IP, SERVER_PORT);
+  printf("[  MAIN] server configuration: %s:%d\n", SERVER_IP, SERVER_PORT);
 
+  // configure i2c bus
   int ret = i2c_register(I2C1, &i2c1);
 
   if (ret < 0) {
     printf("[   ERR] I2C register failed: %s\n", strerror(-ret));
   } else {
-    printf("[INF] I2C register: %d\n", ret);
+    printf("[   INF] I2C bus initialized: %d\n", ret);
   }
 
+  // spawn threads
   pthread_t thread_adc;
   pthread_t thread_accel;
-  pthread_t thread_socket;
   pthread_t thread_display;
 
   payload_adc.id = ID_WATERLEVEL;
@@ -60,17 +70,12 @@ int main(void) {
     goto thread_fail;
   }
 
-  // socket communication thread
-  if (pthread_create(&thread_socket, NULL, thread_job_socket, NULL) < 0) {
-    goto thread_fail;
-  }
-
   // LED display thread
   if (pthread_create(&thread_display, NULL, thread_job_display, NULL) < 0) {
     goto thread_fail;
   }
 
-  pthread_join(thread_socket, NULL);
+  pthread_join(thread_adc, NULL);
 
   return 0;
 
@@ -84,13 +89,24 @@ thread_fail:
  * Measures the PCF8561 ADC reading
  */
 void *thread_job_adc(void *arg) {
-  pcf8561_data data;
+  printf("[   ADC] initiating socket...\n");
+
+  int ret;
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+  if (sock < 0) {
+    goto socket_fail;
+  }
+
+  printf("[   ADC] waiting for server...\n");
+  ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
 
   printf("[   ADC] collecting PCF8561 ADC data...\n");
+  pcf8561_data data;
 
   while (1) {
     pthread_mutex_lock(&lock);
-    int ret = pcf8561_read(i2c1, &data);
+    ret = pcf8561_read(i2c1, &data);
     pthread_mutex_unlock(&lock);
 
     if (ret < 0) {
@@ -100,8 +116,20 @@ void *thread_job_adc(void *arg) {
       payload_adc.volume = (payload_adc.note < 30 ) ? 0 : data.ain3;
     }
 
-    usleep(100000);
+    ret = write(sock, &payload_adc, sizeof(payload_t));
+
+    if (ret < 0) {
+      printf("[   ADC] write failed: %s\n", strerror(errno));
+    }
+
+    printf("[   ADC] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_adc.id, payload_adc.note, payload_adc.volume);
+
+    usleep(100000); // 100ms delay
   }
+
+socket_fail:
+  printf("[   ADC] socket connection failed\n");
+  pthread_exit((void *) -1);
 }
 
 
@@ -109,10 +137,23 @@ void *thread_job_adc(void *arg) {
  * Measures the ADXL345 accelerometer reading
  */
 void *thread_job_accel(void *arg) {
+  printf("[ ACCEL] initiating socket...\n");
+
+  int ret;
+  int sock = socket(AF_INET, SOCK_STREAM, 0);
+
+  if (sock < 0) {
+    goto socket_fail;
+  }
+
+  printf("[ ACCEL] waiting for server...\n");
+  ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
+
+  printf("[ ACCEL] collecting ADXL345 accelerometer data...\n");
   adxl345_data data;
 
   pthread_mutex_lock(&lock);
-  int ret = adxl345_setup(i2c1);
+  ret = adxl345_setup(i2c1);
   pthread_mutex_unlock(&lock);
 
   if (ret < 0) {
@@ -120,8 +161,6 @@ void *thread_job_accel(void *arg) {
   } else {
     printf("[ ACCEL] ADXL345 setup: %d\n", ret);
   }
-
-  printf("[ ACCEL] collecting ADXL345 accelerometer data...\n");
 
   while (1) {
     pthread_mutex_lock(&lock);
@@ -138,61 +177,19 @@ void *thread_job_accel(void *arg) {
       payload_accel.volume = (payload_accel.note < 30) ? 0 : 80; // fixed volume
     }
 
-    usleep(100000);
-  }
-}
-
-
-/**************************************************************************
- * Transmit sensor reading via socket
- */
-void *thread_job_socket(void *arg) {
-  printf("[SOCKET] server: %s\n", SERVER_IP);
-  printf("[SOCKET] initiating socket...\n");
-
-  int ret;
-  int sock = socket(AF_INET, SOCK_STREAM, 0);
-
-  if (sock < 0) {
-    goto socket_fail;
-  }
-
-  struct sockaddr_in server;
-  init_socket_server(&server, SERVER_IP, SERVER_PORT);
-
-  printf("[SOCKET] waiting for server...\n");
-  ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
-
-  if (ret < 0) {
-    goto socket_fail;
-  }
-
-  printf("[SOCKET] server online\n");
-
-  while (1) {
-    /* ADC value transmission */
-    ret = write(sock, &payload_adc, sizeof(payload_t));
-
-    if (ret < 0) {
-      printf("[SOCKET] write failed: %s\n", strerror(errno));
-    }
-
-    printf("[SOCKET] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_adc.id, payload_adc.note, payload_adc.volume);
-    usleep(100000); // transmission delay 100ms
-
-    /* acceleromter value transmission */
     ret = write(sock, &payload_accel, sizeof(payload_t));
 
     if (ret < 0) {
-      printf("[SOCKET] write failed: %s\n", strerror(errno));
+      printf("[ ACCEL] write failed: %s\n", strerror(errno));
     }
 
-    printf("[SOCKET] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_accel.id, payload_accel.note, payload_accel.volume);
-    usleep(100000); // transmission delay 100ms
+    printf("[ ACCEL] write(%d): { id: %d, note: %d, volume: %d }\n", ret, payload_accel.id, payload_accel.note, payload_accel.volume);
+
+    usleep(100000); // 100ms delay
   }
 
 socket_fail:
-  printf("[SOCKET] socket connection failed\n");
+  printf("[   ADC] socket connection failed\n");
   pthread_exit((void *) -1);
 }
 
