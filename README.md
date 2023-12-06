@@ -1,8 +1,9 @@
 # trinity
 
-## 1. git
-### recommendation: [Fork](https://git-fork.com/), a GUI git client
+## 0. system overview
+![](/assets/overview.png)
 
+## 1. git
 ### create your working branch
 ```sh
 git checkout -b feature/<your_branch_name>
@@ -10,7 +11,8 @@ git checkout -b feature/<your_branch_name>
 
 ### rebase with origin/main
 ```sh
-git rebase origin/main <your_branch_name>
+git checkout <your_branch_name>
+git rebase origin/main
 ```
 
 ## 2. programming
@@ -31,7 +33,7 @@ git rebase origin/main <your_branch_name>
   int sock = socket(AF_INET, SOCK_STREAM, 0);
 
   struct sockaddr_in server;
-  init_socket_server(&server, SERVER_IP, SERVER_PORT_#); // < replace SERVER_PORT_# to your port
+  init_socket_server(&server, SERVER_IP, SERVER_PORT);
 
   int ret = connect(sock, (struct sockaddr*)&server, sizeof(server));
 ...
@@ -51,7 +53,6 @@ make
 ```sh
 make rpi-<your_device>
 ```
-ex) `make rpi-amp`
 
 ## 4. execute and debug
 ```sh
@@ -60,18 +61,13 @@ gdb ./build/rpi-<your_device> # debug
 ```
 
 ## 5. mockup socket server
-### run server
+### run
 ```sh
 make server-mockup
 build/server-mockup
 ```
 
-#### run in background
-```sh
-build/server-mockup &
-```
-
-### set mockup server in your device
+### use it in your device
 ```c
 #define SERVER_MOCK 1 // must declared before including types.h
 
