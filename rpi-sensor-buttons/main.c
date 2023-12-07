@@ -194,15 +194,14 @@ void *thread_job_socket(void *arg)
 
   while (1)
   {
+    if(result.note < 30){
+      continue;
+    }
     ret = write(sock, &result, sizeof(result));
 
     if (ret < 0)
     {
       printf("[SOCKET] write failed: %s\n", strerror(errno));
-    }
-
-    if (result.note < 30){
-      continue;
     }
 
     printf("[SOCKET] write: %d %d %d(%d)\n", result.id, result.note, result.volume, ret);
